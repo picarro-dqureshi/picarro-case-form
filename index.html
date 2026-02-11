@@ -1457,6 +1457,18 @@
 
                     <!-- Row 4 -->
                     <div class="form-group">
+                        <!-- Empty placeholder -->
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Software Version (DCU, etc.)</label>
+                        <input type="text" class="form-input" id="softwareVersion">
+                    </div>
+                    <div class="form-group">
+                        <!-- Empty placeholder -->
+                    </div>
+
+                    <!-- Row 5 -->
+                    <div class="form-group">
                         <label class="form-label required">Type of Service</label>
                         <select class="form-select" id="typeOfService">
                             <option value="">-- Select --</option>
@@ -1477,7 +1489,7 @@
                         </select>
                     </div>
 
-                    <!-- Row 5 -->
+                    <!-- Row 6 -->
                     <div class="form-group">
                         <!-- Empty placeholder -->
                     </div>
@@ -1494,6 +1506,7 @@
             <!-- Tabs Section -->
             <div class="form-tabs">
                 <div class="form-tab active" onclick="switchTab(this, 'related-records')">Related Records & Summary</div>
+                <div class="form-tab" onclick="switchTab(this, 'downtime')">Downtime</div>
                 <div class="form-tab" onclick="switchTab(this, 'reports-files')">Reports & Files</div>
                 <div class="form-tab" onclick="switchTab(this, 'parts-used')">Parts Used</div>
                 <div class="form-tab" onclick="switchTab(this, 'communication')">Communication</div>
@@ -1547,8 +1560,13 @@
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">Software Version (DCU, etc.)</label>
-                                    <input type="text" class="form-input" id="softwareVersion">
+                                    <label class="form-label">System passed QA/QC</label>
+                                    <select class="form-select" id="systemPassedQaQc">
+                                        <option value="">-- Select --</option>
+                                        <option value="yes">Yes</option>
+                                        <option value="no">No</option>
+                                        <option value="na">N/A</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -1593,6 +1611,32 @@
                                 <button class="btn-action" onclick="removeTableRow('calibrationGasBody')">🗑 Remove</button>
                                 <button class="btn-action" onclick="moveTableRow('calibrationGasBody', 'up')">↑ Move Up</button>
                                 <button class="btn-action" onclick="moveTableRow('calibrationGasBody', 'down')">↓ Move Down</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Downtime Tab -->
+            <div id="downtime" class="tab-content">
+                <div class="tab-section">
+                    <div class="tab-section-header" onclick="toggleTabSection(this)">
+                        <span class="section-toggle">▼</span>
+                        <span class="tab-section-title">System Downtime</span>
+                    </div>
+                    <div class="tab-section-content">
+                        <div class="form-grid" style="grid-template-columns: repeat(3, 1fr);">
+                            <div class="form-group">
+                                <label class="form-label">Time system entered maintenance mode</label>
+                                <input type="datetime-local" class="form-input" id="maintenanceEntryTime">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Time system exited maintenance mode</label>
+                                <input type="datetime-local" class="form-input" id="maintenanceExitTime">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Total Downtime for system</label>
+                                <input type="text" class="form-input" id="totalDowntime" readonly placeholder="Auto-calculated" style="background-color: #f5f5f5;">
                             </div>
                         </div>
                     </div>
@@ -1904,10 +1948,11 @@
             'customForm', 'assignedTo', 'caseNumber', 'status', 'priority', 'company', 
             'contact', 'email', 'phone', 'profile', 'subject', 'issueReportedDate',
             'serviceStartDate', 'serviceCompletedDate', 'maintenanceMode', 'calibrationsFailed',
-            'cabinetSn', 'analyzerSn', 'componentSn', 'samplingLocation',
+            'cabinetSn', 'analyzerSn', 'componentSn', 'softwareVersion', 'samplingLocation',
             'caseIssue', 'caseIssueSecondary', 'caseIssueAlternate', 'typeOfService',
             'descriptionOfIssue', 'descriptionOfMaintenance', 'resolution', 'incidentOrigin',
-            'relatedRmaNumber', 'softwareVersion', 'shipToSelect', 'shippingCode'
+            'relatedRmaNumber', 'systemPassedQaQc', 'shipToSelect', 'shippingCode',
+            'maintenanceEntryTime', 'maintenanceExitTime', 'totalDowntime'
         ];
 
         // Save form data to localStorage
@@ -2058,6 +2103,9 @@
             // Finally setup auto-save
             setupAutoSave();
             
+            // Setup downtime calculation
+            setupDowntimeCalculation();
+            
             console.log('Form data loaded from localStorage');
         });
 
@@ -2072,6 +2120,59 @@
             if (issueReportedEl && !issueReportedEl.value) {
                 issueReportedEl.value = new Date().toISOString().split('T')[0];
             }
+        }
+
+        // Calculate total downtime based on entry and exit times
+        function calculateDowntime() {
+            const entryTime = document.getElementById('maintenanceEntryTime').value;
+            const exitTime = document.getElementById('maintenanceExitTime').value;
+            const totalDowntimeEl = document.getElementById('totalDowntime');
+            
+            if (entryTime && exitTime) {
+                const entry = new Date(entryTime);
+                const exit = new Date(exitTime);
+                const diffMs = exit - entry;
+                
+                if (diffMs < 0) {
+                    totalDowntimeEl.value = 'Invalid (exit before entry)';
+                    return;
+                }
+                
+                // Calculate days, hours, minutes
+                const diffMinutes = Math.floor(diffMs / (1000 * 60));
+                const days = Math.floor(diffMinutes / (60 * 24));
+                const hours = Math.floor((diffMinutes % (60 * 24)) / 60);
+                const minutes = diffMinutes % 60;
+                
+                let result = '';
+                if (days > 0) {
+                    result += days + ' day' + (days > 1 ? 's' : '') + ' ';
+                }
+                if (hours > 0 || days > 0) {
+                    result += hours + ' hour' + (hours !== 1 ? 's' : '') + ' ';
+                }
+                result += minutes + ' minute' + (minutes !== 1 ? 's' : '');
+                
+                totalDowntimeEl.value = result.trim();
+            } else {
+                totalDowntimeEl.value = '';
+            }
+        }
+
+        // Setup downtime calculation listeners
+        function setupDowntimeCalculation() {
+            const entryTimeEl = document.getElementById('maintenanceEntryTime');
+            const exitTimeEl = document.getElementById('maintenanceExitTime');
+            
+            if (entryTimeEl) {
+                entryTimeEl.addEventListener('change', calculateDowntime);
+            }
+            if (exitTimeEl) {
+                exitTimeEl.addEventListener('change', calculateDowntime);
+            }
+            
+            // Recalculate on page load in case values were restored from localStorage
+            calculateDowntime();
         }
 
         // ==================== END LOCAL STORAGE PERSISTENCE ====================
@@ -2211,7 +2312,9 @@
             doc.text('Analyzer SN:  ' + (getValue('analyzerSn') || 'N/A'), custCol2, yPos);
             yPos += 6;
             doc.text('Component SN:  ' + (getValue('componentSn') || 'N/A'), custCol1, yPos);
-            doc.text('Sampling Location:  ' + (getValue('samplingLocation') || 'N/A'), custCol2, yPos);
+            doc.text('Software Version:  ' + (getValue('softwareVersion') || 'N/A'), custCol2, yPos);
+            yPos += 6;
+            doc.text('Sampling Location:  ' + (getValue('samplingLocation') || 'N/A'), custCol1, yPos);
             yPos += 10;
             
             // ==================== CASE INFORMATION ====================
@@ -2257,7 +2360,16 @@
             addField('Was Problem Resolved', getValue('resolution'));
             addField('Incident Origin', getValue('incidentOrigin'));
             addField('Related RMA Number', getValue('relatedRmaNumber'));
-            addField('Software Version (DCU, etc.)', getValue('softwareVersion'));
+            addField('System passed QA/QC', getValue('systemPassedQaQc'));
+            yPos += 5;
+            
+            // ==================== DOWNTIME ====================
+            checkPageBreak(30);
+            addSectionHeader('System Downtime');
+            
+            addField('Maintenance Entry Time', getValue('maintenanceEntryTime'));
+            addField('Maintenance Exit Time', getValue('maintenanceExitTime'));
+            addField('Total Downtime', getValue('totalDowntime'));
             yPos += 5;
             
             // ==================== PARTS USED ====================
