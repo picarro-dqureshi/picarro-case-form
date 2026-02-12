@@ -1457,18 +1457,6 @@
 
                     <!-- Row 4 -->
                     <div class="form-group">
-                        <!-- Empty placeholder -->
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Software Version (DCU, etc.)</label>
-                        <input type="text" class="form-input" id="softwareVersion">
-                    </div>
-                    <div class="form-group">
-                        <!-- Empty placeholder -->
-                    </div>
-
-                    <!-- Row 5 -->
-                    <div class="form-group">
                         <label class="form-label required">Type of Service</label>
                         <select class="form-select" id="typeOfService">
                             <option value="">-- Select --</option>
@@ -1479,8 +1467,8 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Sampling Location (if applicable)</label>
-                        <input type="text" class="form-input" id="samplingLocation">
+                        <label class="form-label">Software Version (DCU, etc.)</label>
+                        <input type="text" class="form-input" id="softwareVersion">
                     </div>
                     <div class="form-group">
                         <label class="form-label required">Case Issue [Secondary]</label>
@@ -1489,12 +1477,18 @@
                         </select>
                     </div>
 
-                    <!-- Row 6 -->
+                    <!-- Row 5 -->
                     <div class="form-group">
-                        <!-- Empty placeholder -->
+                        <label class="form-label">In Person or Remote</label>
+                        <select class="form-select" id="inPersonOrRemote">
+                            <option value="">-- Select --</option>
+                            <option value="in-person">In Person</option>
+                            <option value="remote">Remote</option>
+                        </select>
                     </div>
                     <div class="form-group">
-                        <!-- Empty placeholder -->
+                        <label class="form-label">Sampling Location (if applicable)</label>
+                        <input type="text" class="form-input" id="samplingLocation">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Case Issue [Alternate]</label>
@@ -1631,7 +1625,7 @@
                                 <input type="datetime-local" class="form-input" id="maintenanceEntryTime">
                             </div>
                             <div class="form-group">
-                                <label class="form-label">Time system exited maintenance mode</label>
+                                <label class="form-label">End time of passed system calibration</label>
                                 <input type="datetime-local" class="form-input" id="maintenanceExitTime">
                             </div>
                             <div class="form-group">
@@ -1949,7 +1943,7 @@
             'contact', 'email', 'phone', 'profile', 'subject', 'issueReportedDate',
             'serviceStartDate', 'serviceCompletedDate', 'maintenanceMode', 'calibrationsFailed',
             'cabinetSn', 'analyzerSn', 'componentSn', 'softwareVersion', 'samplingLocation',
-            'caseIssue', 'caseIssueSecondary', 'caseIssueAlternate', 'typeOfService',
+            'caseIssue', 'caseIssueSecondary', 'caseIssueAlternate', 'typeOfService', 'inPersonOrRemote',
             'descriptionOfIssue', 'descriptionOfMaintenance', 'resolution', 'incidentOrigin',
             'relatedRmaNumber', 'systemPassedQaQc', 'shipToSelect', 'shippingCode',
             'maintenanceEntryTime', 'maintenanceExitTime', 'totalDowntime'
@@ -2322,6 +2316,7 @@
             
             addField('Case Subject', getValue('subject'));
             addField('Type of Service', getValue('typeOfService'));
+            addField('In Person or Remote', getValue('inPersonOrRemote'));
             addField('Issue Reported Date', getValue('issueReportedDate'));
             addField('Service Start Date', getValue('serviceStartDate'));
             addField('Service Completed Date', getValue('serviceCompletedDate'));
@@ -2368,7 +2363,7 @@
             addSectionHeader('System Downtime');
             
             addField('Maintenance Entry Time', getValue('maintenanceEntryTime'));
-            addField('Maintenance Exit Time', getValue('maintenanceExitTime'));
+            addField('End Time of Passed System Calibration', getValue('maintenanceExitTime'));
             addField('Total Downtime', getValue('totalDowntime'));
             yPos += 5;
             
