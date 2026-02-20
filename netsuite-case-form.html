@@ -1297,7 +1297,9 @@
                     <div class="form-group">
                         <label class="form-label required">Assigned To</label>
                         <select class="form-select" id="assignedTo">
+                            <option value="">-- Select --</option>
                             <option value="chopp-aaron">Chopp, Aaron</option>
+                            <option value="mcdonald-michael">McDonald, Michael</option>
                             <option value="miller-dave">Miller, Dave</option>
                             <option value="qureshi-daanyaal">Qureshi, Daanyaal</option>
                             <option value="unassigned">Unassigned</option>
@@ -1323,8 +1325,10 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Contact</label>
-                        <select class="form-select" id="contact">
+                        <select class="form-select" id="contact" disabled title="Auto-populated from Company">
+                            <option value="">-- Select --</option>
                             <option value="cu20602">CU20602 Midwest Sterilization Corporation</option>
+                            <option value="cu23744">CU23744 Becton Dickinson</option>
                             <option value="other">Other Contact</option>
                         </select>
                     </div>
@@ -1355,7 +1359,9 @@
                     <div class="form-group">
                         <label class="form-label required">Company</label>
                         <select class="form-select" id="company">
+                            <option value="">-- Select --</option>
                             <option value="cu20602">CU20602 Midwest Sterilization Corporation</option>
+                            <option value="cu23744">CU23744 Becton Dickinson</option>
                             <option value="other">Other Company</option>
                         </select>
                     </div>
@@ -1371,8 +1377,9 @@
                     <div class="form-group">
                         <label class="form-label required">Profile</label>
                         <select class="form-select" id="profile">
+                            <option value="">-- Select --</option>
                             <option value="environmental">Picarro Environmental</option>
-                            <option value="industrial" selected>Picarro Industrial</option>
+                            <option value="industrial">Picarro Industrial</option>
                             <option value="research">Picarro Research</option>
                         </select>
                     </div>
@@ -1973,10 +1980,81 @@
             }
         }
 
-        // Clear all saved form data
+        // Clear all saved form data and reset form/tables on screen
         function clearSavedData() {
             localStorage.removeItem(STORAGE_KEY);
-            showNotification('Saved data cleared. Refresh to start fresh.');
+
+            // Clear all form fields
+            formFieldIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    if (el.tagName === 'SELECT') {
+                        el.selectedIndex = 0;
+                    } else {
+                        el.value = '';
+                    }
+                }
+            });
+
+            // Reset Case Issue [Secondary] options and value
+            const caseIssueEl = document.getElementById('caseIssue');
+            if (caseIssueEl) {
+                caseIssueEl.dispatchEvent(new Event('change'));
+            }
+
+            // Clear tables: remove saved rows and clear the input row
+            function clearTableToSingleRow(tableBodyId, tableType) {
+                const tbody = document.getElementById(tableBodyId);
+                if (!tbody) return;
+                const savedRows = tbody.querySelectorAll('tr.parts-saved-row');
+                savedRows.forEach(row => row.remove());
+                const inputRow = tbody.querySelector('tr.parts-input-row');
+                if (inputRow) {
+                    inputRow.querySelectorAll('input, select, textarea').forEach(inp => {
+                        if (inp.type === 'checkbox') inp.checked = false;
+                        else inp.value = '';
+                    });
+                }
+            }
+
+            clearTableToSingleRow('inventoryPartsBody', 'inventory');
+            clearTableToSingleRow('nonInventoryPartsBody', 'nonInventory');
+            clearTableToSingleRow('calibrationGasBody', 'calibrationGas');
+
+            // Clear Reports & Files table and file store
+            reportsFilesStore.clear();
+            const reportsBody = document.getElementById('reportsFilesBody');
+            if (reportsBody) {
+                const savedFileRows = reportsBody.querySelectorAll('tr.saved-row');
+                savedFileRows.forEach(row => row.remove());
+                const inputRow = reportsBody.querySelector('tr.parts-input-row');
+                if (inputRow) {
+                    inputRow.querySelectorAll('input').forEach(inp => {
+                        if (inp.type === 'file') inp.value = '';
+                        else inp.value = '';
+                    });
+                    const nameInput = inputRow.querySelector('.file-name-input');
+                    if (nameInput) {
+                        nameInput.value = '';
+                        nameInput.removeAttribute('data-file-id');
+                        nameInput.removeAttribute('data-file-data');
+                    }
+                }
+            }
+
+            // Clear row selection state
+            selectedRows.inventoryPartsBody = null;
+            selectedRows.nonInventoryPartsBody = null;
+            selectedRows.calibrationGasBody = null;
+
+            // Clear total downtime (calculated field)
+            const totalDowntimeEl = document.getElementById('totalDowntime');
+            if (totalDowntimeEl) totalDowntimeEl.value = '';
+
+            // Flag so that on next page load we don't repopulate default dates
+            sessionStorage.setItem('netsuite_form_cleared', '1');
+
+            showNotification('Saved data cleared. Form reset.');
         }
 
         // Get table data as array
@@ -2090,9 +2168,15 @@
         document.addEventListener('DOMContentLoaded', () => {
             // First load any saved data
             loadFormData();
-            
-            // Then set defaults for fields that are still empty
-            setDefaultValues();
+
+            // If user had clicked "Clear Saved Data" before refreshing, don't fill default dates
+            const wasCleared = sessionStorage.getItem('netsuite_form_cleared');
+            if (wasCleared) {
+                sessionStorage.removeItem('netsuite_form_cleared');
+            } else {
+                // Set defaults for fields that are still empty
+                setDefaultValues();
+            }
             
             // Finally setup auto-save
             setupAutoSave();
@@ -3553,15 +3637,31 @@
             }
         });
 
-        // Auto-populate contact email when company changes
+        // Auto-populate contact from company; email/phone when company changes
+        function updateContactFromCompany() {
+            const companySelect = document.getElementById('company');
+            const contactSelect = document.getElementById('contact');
+            if (!companySelect || !contactSelect) return;
+            contactSelect.value = companySelect.value || '';
+        }
+
         document.getElementById('company').addEventListener('change', function() {
+            updateContactFromCompany();
             if (this.value === 'cu20602') {
                 document.getElementById('email').value = 'JoyW@midweststerilization.com';
                 document.getElementById('phone').value = '(573) 243-8456';
+            } else if (this.value === 'cu23744') {
+                document.getElementById('email').value = '';
+                document.getElementById('phone').value = '';
             } else {
                 document.getElementById('email').value = '';
                 document.getElementById('phone').value = '';
             }
+        });
+
+        // Set contact from company on load (e.g. after loading saved data)
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(updateContactFromCompany, 100);
         });
 
 
